@@ -2,7 +2,7 @@
 # 使用方法: make [command]
 
 .PHONY: help install uninstall check-status manage-dirs backup-config setup-permissions \
-        pg-status pg-start pg-stop pg-restart pg-reload pg-log add-role remove-role list-roles deploy
+        pg-status pg-start pg-stop pg-restart pg-reload pg-log add-role remove-role list-roles deploy reset-db
 
 # 顏色定義
 RED = \033[0;31m
@@ -37,6 +37,7 @@ help:
 	@echo -e "  $(GREEN)make add-role$(NC)              - 新增客戶端角色"
 	@echo -e "  $(GREEN)make remove-role$(NC)           - 移除客戶端角色"
 	@echo -e "  $(GREEN)make list-roles$(NC)            - 列出所有角色"
+	@echo -e "  $(GREEN)make reset-db$(NC)              - 重置資料庫（刪除並重新建立）"
 	@echo -e ""
 	@echo -e "$(CYAN)其他工具:$(NC)"
 	@echo -e "  $(GREEN)make manage-dirs$(NC)          - 管理目錄 (check/fix-perms)"
@@ -65,6 +66,7 @@ setup-permissions:
 	@chmod +x scripts/uninstall/*.sh 2>/dev/null || true
 	@chmod +x scripts/manage/*.sh 2>/dev/null || true
 	@chmod +x scripts/utils/common.sh 2>/dev/null || true
+	@chmod +x scripts/manage/reset-database.sh 2>/dev/null || true
 	@echo -e "$(GREEN)✅ 所有腳本權限設定完成$(NC)"
 
 ## 完整安裝 pgBouncer
@@ -186,3 +188,8 @@ show-env:
 deploy:
 	@echo -e "$(BLUE)▶ 部署專案到遠端伺服器$(NC)"
 	@./deploy.sh
+
+## 重置資料庫（刪除並重新建立，保留角色）
+reset-db:
+	@echo -e "$(BLUE)▶ 重置資料庫$(NC)"
+	@./scripts/manage/reset-database.sh

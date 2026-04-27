@@ -380,7 +380,7 @@ PostgreSQL 資料庫 (埠 5432)
 
 ---
 
-## **管理腳本（7個）**
+## **管理腳本（8個）**
 
 ### **管理腳本 1：add-client-role.sh - 新增客戶端角色**
 
@@ -490,6 +490,29 @@ PostgreSQL 資料庫 (埠 5432)
 - 刪除暫時檔案
 
 **為什麼需要：** 移除不再使用的角色，保持系統整潔
+
+---
+
+### **管理腳本 8：reset-database.sh - 重置資料庫**
+
+**目的：** 刪除現有資料庫並重新建立（保留既有的角色）
+
+**具體操作：**
+- 顯示警告訊息並要求使用者確認（y/N）
+- 自動偵測並選擇最佳的 PostgreSQL 連線方式：
+  - 優先使用 `sudo -u postgres`（適用於本機 trust/peer 認證）
+  - 其次使用 TCP + 密碼認證（如果 .env 有設定 PG_SUPER_PASSWORD）
+  - 最後使用 Unix socket（無密碼）
+- 執行 `DROP DATABASE IF EXISTS ... WITH (FORCE)` 強制刪除資料庫（斷開所有連線）
+- 執行 `CREATE DATABASE ... OWNER ...` 重新建立資料庫
+- 重新授予客戶端角色資料庫連線權限：`GRANT CONNECT ON DATABASE`
+- 在目標資料庫中重新授予 Schema 權限：
+  - `GRANT USAGE ON SCHEMA public`
+  - `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES`
+  - `ALTER DEFAULT PRIVILEGES`（未來新建的表格自動繼承權限）
+- 顯示重置結果摘要
+
+**為什麼需要：** 當資料庫被「玩壞」或需要清空資料重新開始時，可以快速重置資料庫而不需要重新建立角色
 
 ---
 
