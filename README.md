@@ -169,28 +169,23 @@ PostgreSQL 資料庫 (埠 5432)
 
 ---
 
-### **步驟 7：07-create-config.sh - 建立設定檔**
+### **步驟 7：07-setup-ssl.sh - 設定 SSL/TLS**
 
-**目的：** 建立 pgbouncer.ini 和 userlist.txt 設定檔
+**目的：** 設定 pgBouncer 的 SSL/TLS 憑證
 
 **具體操作：**
-- **備份現有設定檔**（如果存在）
-- **從 PostgreSQL 取得角色的 SCRAM-SHA-256 hash：**
-  - 自動偵測連線方式（優先使用 sudo -u postgres，其次 TCP+密碼，最後 Unix socket）
-  - 查詢 pgbouncer 管理角色的密碼 hash
-  - 查詢客戶端角色的密碼 hash
-  - 如果找不到 hash 會報錯並提示先執行角色建立腳本
-- **產生 pgbouncer.ini：**
-  - 從模板 [config/pgbouncer.ini.template](cci:7://file:///Users/supojen/2026/save/bouncer-install/config/pgbouncer.ini.template:0:0-0:0) 替換變數
-  - 替換變數包括：PG_HOST、PG_PORT、APP_DB_NAME、監聽位址、埠號、連線池設定等
-- **產生 userlist.txt：**
-  - 格式必須是：`"username" "scram-sha-256$iterations:salt$storedkey:serverkey"`
-  - **不可包含註解**（否則 pgBouncer 會報 "broken auth file" 錯誤）
-  - 寫入 pgbouncer 管理角色和客戶端角色的 hash
-- 設定檔案權限為 640（pgbouncer:pgbouncer）
-- 顯示設定摘要和提醒
+- 檢查 Let's Encrypt 憑證是否存在（`/etc/letsencrypt/live/$SSL_DOMAIN/`）
+- 建立 pgBouncer SSL 目錄結構（`/etc/pgbouncer/ssl/`）
+- 建立版本管理目錄（保留最近 3 個版本）
+- 複製憑證和私鑰到版本目錄
+- 建立符號連結指向當前版本
+- 設定檔案權限（憑證 640、私鑰 600、目錄 755）
+- 建立憑證雜湊值追蹤檔案（`.last_hash`）
+- 清理舊版本（只保留最近 3 個）
+- 驗證憑證有效性（使用 openssl）
+- 測試 pgBouncer 二進位檔案
 
-**為什麼需要：** 此腳本必須在角色建立後執行，因為需要從 PostgreSQL 取得正確的 SCRAM hash
+**為什麼需要：** 讓 pgBouncer 支援 SSL 加密連線，保護客戶端到 pgBouncer 的傳輸安全
 
 ---
 
@@ -218,23 +213,7 @@ PostgreSQL 資料庫 (埠 5432)
 
 ---
 
-### **步驟 9：09-start-service.sh - 啟動服務**
-
-**目的：** 啟動 pgBouncer 服務並驗證運行正常
-
-**具體操作：**
-- 執行 `systemctl enable pgbouncer` 啟用開機啟動
-- 執行 `systemctl start pgbouncer` 啟動服務
-- 等待 2 秒讓服務啟動
-- 檢查服務是否啟動成功
-- 檢查是否監聽設定埠（預設 6432）
-- 如果啟動失敗，顯示服務狀態
-
-**為什麼需要：** 確保 pgBouncer 可以正常啟動並接受連線
-
----
-
-### **步驟 10：10-create-pgbouncer-role.sh - 建立 pgBouncer 管理角色**
+### **步驟 9：09-create-pgbouncer-role.sh - 建立 pgBouncer 管理角色**
 
 **目的：** 在 PostgreSQL 中建立 pgBouncer 管理角色，用於查詢系統狀態
 
@@ -247,19 +226,19 @@ PostgreSQL 資料庫 (埠 5432)
   - 建立角色（如果不存在）：`CREATE ROLE pgbouncer WITH LOGIN PASSWORD 'xxx'`
   - 授予系統權限：
     - `GRANT pg_read_all_settings`：可以讀取所有系統設定參數
-    - `GRANT pg_read_all_stats`：可以讀取所有系統統計資訊 d
+    - `GRANT pg_read_all_stats`：可以讀取所有系統統計資訊
 - 顯示角色建立結果和詳細資訊
 
 **為什麼需要：** pgBouncer 管理介面需要這些權限來查詢連線數、統計資訊等
 
 ---
 
-### **步驟 11：11-create-app-database.sh - 建立應用程式資料庫和客戶端角色**
+### **步驟 10：10-create-app-database.sh - 建立應用程式資料庫和客戶端角色**
 
 **目的：** 建立應用程式資料庫、資料庫擁有者和客戶端角色
 
 **具體操作：**
-- **自動偵測連線方式**（與步驟 10 相同）
+- **自動偵測連線方式**（與步驟 9 相同）
 - **建立資料庫擁有者：**
   - 建立角色（如果不存在）：`CREATE ROLE doadmin WITH LOGIN PASSWORD 'xxx' CREATEDB`
 - **建立應用程式資料庫：**
@@ -278,7 +257,49 @@ PostgreSQL 資料庫 (埠 5432)
 
 ---
 
-### **步驟 12：12-verify-installation.sh - 驗證安裝結果**
+### **步驟 11：11-create-config.sh - 建立設定檔**
+
+**目的：** 建立 pgbouncer.ini 和 userlist.txt 設定檔
+
+**具體操作：**
+- **備份現有設定檔**（如果存在）
+- **從 PostgreSQL 取得角色的 SCRAM-SHA-256 hash：**
+  - 自動偵測連線方式（優先使用 sudo -u postgres，其次 TCP+密碼，最後 Unix socket）
+  - 查詢 pgbouncer 管理角色的密碼 hash
+  - 查詢客戶端角色的密碼 hash
+  - 如果找不到 hash 會報錯並提示先執行角色建立腳本
+- **產生 pgbouncer.ini：**
+  - 從模板 [config/pgbouncer.ini.template](cci:7://file:///Users/supojen/2026/save/bouncer-install/config/pgbouncer.ini.template:0:0-0:0) 替換變數
+  - 替換變數包括：PG_HOST、PG_PORT、APP_DB_NAME、監聽位址、埠號、連線池設定等
+  - 如果偵測到 SSL 憑證，自動啟用 SSL 設定
+- **產生 userlist.txt：**
+  - 格式必須是：`"username" "scram-sha-256$iterations:salt$storedkey:serverkey"`
+  - **不可包含註解**（否則 pgBouncer 會報 "broken auth file" 錯誤）
+  - 寫入 pgbouncer 管理角色和客戶端角色的 hash
+- 設定檔案權限為 640（pgbouncer:pgbouncer）
+- 顯示設定摘要和提醒
+
+**為什麼需要：** 此腳本必須在角色建立後執行，因為需要從 PostgreSQL 取得正確的 SCRAM hash
+
+---
+
+### **步驟 12：12-start-service.sh - 啟動服務**
+
+**目的：** 啟動 pgBouncer 服務並驗證運行正常
+
+**具體操作：**
+- 執行 `systemctl enable pgbouncer` 啟用開機啟動
+- 執行 `systemctl start pgbouncer` 啟動服務
+- 等待 2 秒讓服務啟動
+- 檢查服務是否啟動成功
+- 檢查是否監聽設定埠（預設 6432）
+- 如果啟動失敗，顯示服務狀態
+
+**為什麼需要：** 確保 pgBouncer 可以正常啟動並接受連線
+
+---
+
+### **步驟 13：13-verify-installation.sh - 驗證安裝結果**
 
 **目的：** 全面檢查安裝是否成功
 
