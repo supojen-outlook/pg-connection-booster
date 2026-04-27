@@ -2,7 +2,7 @@
 # 使用方法: make [command]
 
 .PHONY: help install uninstall check-status manage-dirs backup-config setup-permissions \
-        pg-status pg-start pg-stop pg-restart pg-reload pg-log add-role remove-role list-roles
+        pg-status pg-start pg-stop pg-restart pg-reload pg-log add-role remove-role list-roles deploy
 
 # 顏色定義
 RED = \033[0;31m
@@ -48,6 +48,10 @@ help:
 	@echo -e "  3. $(CYAN)make setup-permissions$(NC)        - 設定腳本執行權限"
 	@echo -e "  4. $(CYAN)sudo make install$(NC)              - 開始安裝"
 	@echo -e ""
+	@echo -e ""
+	@echo -e "$(YELLOW)⚠️  重要提醒:$(NC)"
+	@echo -e "  $(GREEN)make deploy$(NC)               - 部署專案到遠端伺服器 (在工作電腦上執行)"
+	@echo -e ""
 	@echo -e "$(YELLOW)注意:$(NC) 安裝需要 root 權限"
 	@echo -e "$(BLUE)════════════════════════════════════════════════════════════$(NC)"
 
@@ -56,7 +60,7 @@ help:
 ## 設定所有腳本執行權限
 setup-permissions:
 	@echo -e "$(BLUE)▶ 設定腳本執行權限$(NC)"
-	@chmod +x install.sh uninstall.sh 2>/dev/null || true
+	@chmod +x install.sh uninstall.sh deploy.sh 2>/dev/null || true
 	@chmod +x scripts/install/*.sh 2>/dev/null || true
 	@chmod +x scripts/uninstall/*.sh 2>/dev/null || true
 	@chmod +x scripts/manage/*.sh 2>/dev/null || true
@@ -177,3 +181,8 @@ show-env:
 	@if [ -f .env ]; then \
 		echo -e "  $(CYAN)pgBouncer 版本:$(NC) $$(grep PGBOUNCER_VERSION .env | cut -d'=' -f2)"; \
 	fi
+
+## 部署專案到遠端伺服器
+deploy:
+	@echo -e "$(BLUE)▶ 部署專案到遠端伺服器$(NC)"
+	@./deploy.sh
