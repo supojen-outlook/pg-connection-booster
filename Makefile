@@ -2,7 +2,7 @@
 # 使用方法: make [command]
 
 .PHONY: help install uninstall check-status manage-dirs backup-config setup-permissions \
-        pg-status pg-start pg-stop pg-restart pg-reload pg-log add-role remove-role list-roles deploy reset-db
+        pg-status pg-start pg-stop pg-restart pg-reload pg-log add-role remove-role list-roles deploy reset-db show-connection
 
 # 顏色定義
 RED = \033[0;31m
@@ -38,6 +38,7 @@ help:
 	@echo -e "  $(GREEN)make remove-role$(NC)           - 移除客戶端角色"
 	@echo -e "  $(GREEN)make list-roles$(NC)            - 列出所有角色"
 	@echo -e "  $(GREEN)make reset-db$(NC)              - 重置資料庫（刪除並重新建立）"
+	@echo -e "  $(GREEN)make show-connection$(NC)       - 顯示資料庫連線資訊（含 .NET 連線字串）"
 	@echo -e ""
 	@echo -e "$(CYAN)其他工具:$(NC)"
 	@echo -e "  $(GREEN)make manage-dirs$(NC)          - 管理目錄 (check/fix-perms)"
@@ -67,6 +68,7 @@ setup-permissions:
 	@chmod +x scripts/manage/*.sh 2>/dev/null || true
 	@chmod +x scripts/utils/common.sh 2>/dev/null || true
 	@chmod +x scripts/manage/reset-database.sh 2>/dev/null || true
+	@chmod +x scripts/manage/show-connection.sh 2>/dev/null || true
 	@echo -e "$(GREEN)✅ 所有腳本權限設定完成$(NC)"
 
 ## 完整安裝 pgBouncer
@@ -193,3 +195,8 @@ deploy:
 reset-db:
 	@echo -e "$(BLUE)▶ 重置資料庫$(NC)"
 	@./scripts/manage/reset-database.sh
+
+## 顯示資料庫連線資訊（含 .NET 連線字串）
+show-connection:
+	@echo -e "$(BLUE)▶ 顯示連線資訊$(NC)"
+	@./scripts/manage/show-connection.sh
